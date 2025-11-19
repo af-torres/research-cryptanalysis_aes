@@ -1,14 +1,12 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-
 class Encoder(nn.Module):
-    def __init__(self, input_dim, embed_dim, hidden_dim, n_layers=1):
+    def __init__(self, input_dim, embed_dim, hidden_dim, pad_idx, n_layers=1):
         super(Encoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
 
-        self.embedding = nn.Embedding(input_dim, embed_dim)
+        self.embedding = nn.Embedding(input_dim, embed_dim, padding_idx=pad_idx)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, batch_first=True)
 
     def forward(self, src):
@@ -21,12 +19,12 @@ class Encoder(nn.Module):
         return hidden, cell
 
 class Decoder(nn.Module):
-    def __init__(self, output_dim, embed_dim, hidden_dim, n_layers=1):
+    def __init__(self, output_dim, embed_dim, hidden_dim, pad_idx, n_layers=1):
         super(Decoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
         
-        self.embedding = nn.Embedding(output_dim, embed_dim)
+        self.embedding = nn.Embedding(output_dim, embed_dim, padding_idx=pad_idx)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_dim, output_dim)
     
@@ -42,8 +40,8 @@ class Decoder(nn.Module):
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, device):
         super(Seq2Seq, self).__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        self.encoder: Encoder = encoder
+        self.decoder: Decoder = decoder
         self.device = device
     
     def forward(self, src, trg, teacher_forcing_ratio=0.5):
@@ -70,3 +68,9 @@ class Seq2Seq(nn.Module):
             
         return outputs
 
+def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, device) -> Seq2Seq:
+    encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
+    decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx).to(device)
+    seq2seq = Seq2Seq(encoder, decoder, device)
+
+    return seq2seq

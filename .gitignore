@@ -1,5 +1,9 @@
 # Vim
 *.un~
+changes.diff
+
+# Big training data files
+results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
