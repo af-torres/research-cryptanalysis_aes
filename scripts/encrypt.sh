@@ -52,4 +52,4 @@ case "$key_size" in
         ;;
 esac
 
-openssl enc "-aes-$key_size-cbc" -K "$key" -iv "$iv" -a
+openssl enc "-aes-$key_size-cbc" -K "$key" -iv "$iv" -a -A

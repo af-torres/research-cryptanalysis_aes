@@ -42,4 +42,3 @@ for key in KEY_FILES:
     fname = f"{OUT_DIR}/{keyName}.csv"
     np.savetxt(fname, np.array(enc, dtype=str), delimiter=",", fmt="%s")
     print(f"wrote file {fname}")
-

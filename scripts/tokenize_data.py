@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pickle
+import base64
 
 PAD_IDX = 256
 SOS_IDX = 257
@@ -13,8 +14,12 @@ ENCRYPTED_DATA_FILES = [
     "./data/encrypted/256-bytes.csv",
 ]
 
-def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None):
-    byte_ids = list(sentence.encode("utf-8")) 
+def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False):
+    if b64_enc:
+        decoded_sentence = base64.b64decode(sentence)
+    else:
+        decoded_sentence = sentence.encode("utf-8")
+    byte_ids = list(decoded_sentence) 
     
     if add_sos:
         byte_ids = [SOS_IDX] + byte_ids
@@ -51,11 +56,9 @@ for c_file in ENCRYPTED_DATA_FILES:
 
     c_tokens = []
     for c_i in c:
-        c_tokens.append(byte_tokenize(c_i, max_len=max_len))
+        c_tokens.append(byte_tokenize(c_i, max_len=max_len, b64_enc=True))
     
     pkl_file = f"./data/{basename}-tokens.pkl"
     with open(pkl_file, "wb") as f:
         pickle.dump(np.array(c_tokens, dtype=np.uint16), f)
     print(f"wrote tokenized encrypted sentences file {pkl_file}")
-        
-    
