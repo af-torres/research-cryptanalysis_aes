@@ -138,4 +138,4 @@ with open(training_results_file, "wb") as f:
     ), f)
 
 with open(LOG_FILE, "a") as f:
-    f.write(f"{run_id}: {dataset}")
+    f.write(f"{run_id}: dataset={dataset};\n")
