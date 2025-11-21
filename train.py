@@ -22,6 +22,9 @@ parser.add_argument('-d', '--dataset', choices = [
         'short_128',
         'short_192',
         'short_256',
+        'short_rand_iv_128',
+        'short_rand_iv_192',
+        'short_rand_iv_256',
     ],
     required=True,
 )
@@ -35,11 +38,17 @@ C_DATASET = dict(
     short_128 = "./data/128-byte-tokens.pkl",
     short_192 = "./data/192-byte-tokens.pkl",
     short_256 = "./data/256-byte-tokens.pkl",
+    short_rand_iv_128 = "./data/128-byte-rand-iv-tokens.pkl",
+    short_rand_iv_192 = "./data/192-byte-rand-iv-tokens.pkl",
+    short_rand_iv_256 = "./data/256-byte-rand-iv-tokens.pkl",
 )
 P_DATASET = dict(
     short_128 = "./data/englishSentence-tokens.pkl",
     short_192 = "./data/englishSentence-tokens.pkl",
     short_256 = "./data/englishSentence-tokens.pkl",
+    short_rand_iv_128 = "./data/englishSentence-tokens.pkl",
+    short_rand_iv_192 = "./data/englishSentence-tokens.pkl",
+    short_rand_iv_256 = "./data/englishSentence-tokens.pkl",
 )
 RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
@@ -138,4 +147,4 @@ with open(training_results_file, "wb") as f:
     ), f)
 
 with open(LOG_FILE, "a") as f:
-    f.write(f"{run_id}: dataset={dataset};\n")
+    f.write(f"{run_id}: dataset={dataset}\n")

@@ -9,9 +9,12 @@ EOS_IDX = 258
 
 PLAIN_TEXT_DATA_FILE = "./data/englishSentences.csv"
 ENCRYPTED_DATA_FILES = [
-    "./data/encrypted/128-bytes.csv",
-    "./data/encrypted/192-bytes.csv",
-    "./data/encrypted/256-bytes.csv",
+    #"./data/encrypted/128-bytes.csv",
+    #"./data/encrypted/192-bytes.csv",
+    #"./data/encrypted/256-bytes.csv",
+    "./data/encrypted/128-bytes-rand-iv.csv",
+    "./data/encrypted/192-bytes-rand-iv.csv",
+    "./data/encrypted/256-bytes-rand-iv.csv",
 ]
 
 def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False):
@@ -41,7 +44,7 @@ p_tokens = []
 for p in p_set:
     p_tokens.append(byte_tokenize(p, max_len=max_len))
 
-basename = PLAIN_TEXT_DATA_FILE.rstrip(".csv")
+basename = PLAIN_TEXT_DATA_FILE.removesuffix(".csv")
 p_tokenized_file = f"{basename}-tokens.pkl"
 with open(p_tokenized_file, "wb") as f:
     pickle.dump(np.array(p_tokens, dtype=np.uint16), f)
@@ -49,8 +52,7 @@ with open(p_tokenized_file, "wb") as f:
 print(f"wrote tokenized file {p_tokenized_file}")
 
 for c_file in ENCRYPTED_DATA_FILES:
-    basename = os.path.basename(c_file).rstrip(".csv")
-
+    basename = os.path.basename(c_file).removesuffix(".csv")
     c = np.loadtxt(c_file, delimiter=",", dtype=str).tolist()
     max_len = get_max_len(c)
 

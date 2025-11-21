@@ -26,7 +26,10 @@ run_id = args.run_id
 
 def get_dataset(run_id):
     runs = parse_run_log(LOG_FILE)
-    dataset = runs.get(run_id, "")
+    run_config = runs.get(run_id, None)
+    assert run_config is not None
+    
+    dataset = run_config.get("dataset", "")
     assert dataset != ""
     
     return dataset

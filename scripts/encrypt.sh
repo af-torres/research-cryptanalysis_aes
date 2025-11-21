@@ -30,17 +30,22 @@ for arg in "$@"; do
     esac
 done
 
-if [[ -z "$KEY_FILE" || -z "$IV_FILE"  ]]; then
+if [[ -z "$KEY_FILE" ]]; then
     print_usage
 fi
 
-if [[ ! -f "$KEY_FILE" || ! -f "$IV_FILE" ]]; then
+if [[ ! -f "$KEY_FILE" || ( ! -z "$IV_FILE" && ! -f "$IV_FILE" ) ]]; then
     echo key or iv are not valid files
     exit 1
 fi
 
 key=$(cat "$KEY_FILE")
-iv=$(cat "$IV_FILE")
+
+if [[ ! -z "$IV_FILE" ]]; then
+    iv=$(cat "$IV_FILE")
+else
+    iv=$(openssl rand -hex 16)
+fi
 
 key_size=$(( ${#key} / 2 * 8  ))
 case "$key_size" in
