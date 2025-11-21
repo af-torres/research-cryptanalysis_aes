@@ -35,20 +35,20 @@ parser.add_argument('-e', '--epochs',
 args = parser.parse_args()
 
 C_DATASET = dict(
-    short_128 = "./data/128-byte-tokens.pkl",
-    short_192 = "./data/192-byte-tokens.pkl",
-    short_256 = "./data/256-byte-tokens.pkl",
-    short_rand_iv_128 = "./data/128-byte-rand-iv-tokens.pkl",
-    short_rand_iv_192 = "./data/192-byte-rand-iv-tokens.pkl",
-    short_rand_iv_256 = "./data/256-byte-rand-iv-tokens.pkl",
+    short_128 = "./data/128-bytes-tokens.pkl",
+    short_192 = "./data/192-bytes-tokens.pkl",
+    short_256 = "./data/256-bytes-tokens.pkl",
+    short_rand_iv_128 = "./data/128-bytes-rand-iv-tokens.pkl",
+    short_rand_iv_192 = "./data/192-bytes-rand-iv-tokens.pkl",
+    short_rand_iv_256 = "./data/256-bytes-rand-iv-tokens.pkl",
 )
 P_DATASET = dict(
-    short_128 = "./data/englishSentence-tokens.pkl",
-    short_192 = "./data/englishSentence-tokens.pkl",
-    short_256 = "./data/englishSentence-tokens.pkl",
-    short_rand_iv_128 = "./data/englishSentence-tokens.pkl",
-    short_rand_iv_192 = "./data/englishSentence-tokens.pkl",
-    short_rand_iv_256 = "./data/englishSentence-tokens.pkl",
+    short_128 = "./data/englishSentences-tokens.pkl",
+    short_192 = "./data/englishSentences-tokens.pkl",
+    short_256 = "./data/englishSentences-tokens.pkl",
+    short_rand_iv_128 = "./data/englishSentences-tokens.pkl",
+    short_rand_iv_192 = "./data/englishSentences-tokens.pkl",
+    short_rand_iv_256 = "./data/englishSentences-tokens.pkl",
 )
 RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
