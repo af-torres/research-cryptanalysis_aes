@@ -1,9 +1,10 @@
 # Vim
 *.un~
-changes.diff
+*.diff
 
 # Big training data files
 results/
+data/wikipediaSentences.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
