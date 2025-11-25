@@ -10,4 +10,3 @@ ds = ds.map(lambda sentence: {
     "text": sentence["text"].strip().replace("<unk>", " ")
 })
 ds.to_csv(DATA_FILE) # type: ignore
-    

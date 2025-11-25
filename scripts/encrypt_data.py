@@ -1,7 +1,6 @@
 import subprocess
-import numpy as np
-import pandas as pd
 import argparse
+from datasets import load_dataset
 import os
 
 parser = argparse.ArgumentParser(
@@ -20,6 +19,7 @@ parser.add_argument('--dataset', '-d',
 parser.add_argument('--random_iv', '-r',
     action='store_true',
 )
+parser.add_argument("--n_proc", "-n", type=int, default=4)
 args = parser.parse_args()
 
 d_config = dict(
@@ -75,18 +75,17 @@ def encrypt(s, key, iv):
 
     return output
 
-sentences = pd.read_csv(DATA_FILE).iloc[:, 0].to_numpy(dtype=str) # type: ignore
+dataset = load_dataset("csv", data_files=DATA_FILE)
 for key in KEY_FILES:
     iv = None
     if not random_iv: iv = f"{key}.iv"
     keyName = os.path.basename(key).removesuffix(".hex")
     print(f"encrypting sentences with {keyName} key")
     
-    enc = []
-    for s in sentences:
-        e = encrypt(str(s), key, iv)
-        enc.append(e)
+    enc = dataset.map(lambda sentence: {
+        "text": encrypt(str(sentence["text"]), key, iv)
+    }, num_proc=args.n_proc)
     
     fname = f"{OUT_DIR}/{keyName}{"-" + DATA_NAME if DATA_NAME else ""}{"-rand-iv" if random_iv else ""}.csv" # type: ignore
-    np.savetxt(fname, np.array(enc, dtype=str), delimiter=",", fmt="%s")
+    enc.to_csv(fname)
     print(f"wrote file {fname}")
