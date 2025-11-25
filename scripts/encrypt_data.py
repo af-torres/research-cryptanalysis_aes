@@ -75,7 +75,7 @@ def encrypt(s, key, iv):
 
     return output
 
-dataset = load_dataset("csv", data_files=DATA_FILE)
+dataset = load_dataset("csv", data_files=DATA_FILE, split="train")
 for key in KEY_FILES:
     iv = None
     if not random_iv: iv = f"{key}.iv"
