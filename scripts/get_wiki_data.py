@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 from datasets import load_dataset
+import os
 
 DATA_DIR = "./data/plain_text/wikipedia"
+os.makedirs(DATA_DIR, exist_ok=True)
 
 def shard_into_files(ds, max_shard_len=3000):
     n = len(ds)

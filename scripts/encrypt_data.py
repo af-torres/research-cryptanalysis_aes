@@ -31,7 +31,7 @@ d_config = dict(
             "./data/keys/192-bytes.hex",
             "./data/keys/256-bytes.hex",
         ],
-        data_name = None,
+        data_name = "engSentences",
     ),
     wikipedia_text = dict(
         data_dir = "./data/plain_text/wikipedia",
@@ -40,7 +40,7 @@ d_config = dict(
             "./data/keys/192-bytes.hex",
             "./data/keys/256-bytes.hex",
         ],
-        data_name = "wiki"
+        data_name = "wikipedia"
     )
 )
 dataset = d_config.get(args.dataset, None)
@@ -51,9 +51,11 @@ ENCRYPT_SCRIPT = "./scripts/encrypt.sh"
 DATA_DIR = dataset.get("data_dir", None)
 KEY_FILES = dataset.get("key_files", None)
 DATA_NAME = dataset.get("data_name", None)
-assert  DATA_DIR and KEY_FILES 
+assert  DATA_DIR and KEY_FILES and DATA_NAME
 
-OUT_DIR = f"./data/encrypted/{DATA_DIR}"
+OUT_DIR = f"./data/encrypted/{DATA_NAME}"
+os.makedirs(OUT_DIR, exist_ok=True)
+
 data_files = glob(os.path.join(DATA_DIR, "**")) # type: ignore
 random_iv: bool = args.random_iv
 
@@ -87,11 +89,11 @@ for key in KEY_FILES:
         "text": encrypt(str(sentence["text"]), key, iv)
     }, num_proc=args.n_proc) # type: ignore
     
-    baseName = f"{OUT_DIR}/{keyName}{"-" + DATA_NAME if DATA_NAME else ""}{"-rand-iv" if random_iv else ""}" # type: ignore
+    baseName = f"{OUT_DIR}/{keyName}-{DATA_NAME}{"-rand-iv" if random_iv else ""}" # type: ignore
     num_shards = len(data_files)
     for i in range(0, num_shards):
         fname = f"{baseName}-shard_{i}.csv"
-        shard = enc.shard(num_shards=num_shards, index=i)
+        shard = enc.shard(num_shards=num_shards, index=i) # type: ignore
         shard.to_csv(fname)
         print(f"wrote file {fname}")
         breakpoint()
