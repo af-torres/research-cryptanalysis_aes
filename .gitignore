@@ -5,6 +5,7 @@
 # Big training data files
 results/
 data/wikipediaSentences.csv
+data/encrypted/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

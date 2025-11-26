@@ -1,21 +1,47 @@
 import os
 import numpy as np
 import pickle
+import argparse
 import base64
 
 PAD_IDX = 256
 SOS_IDX = 257
 EOS_IDX = 258
 
-PLAIN_TEXT_DATA_FILE = "./data/englishSentences.csv"
-ENCRYPTED_DATA_FILES = [
-    #"./data/encrypted/128-bytes.csv",
-    #"./data/encrypted/192-bytes.csv",
-    #"./data/encrypted/256-bytes.csv",
-    "./data/encrypted/128-bytes-rand-iv.csv",
-    "./data/encrypted/192-bytes-rand-iv.csv",
-    "./data/encrypted/256-bytes-rand-iv.csv",
-]
+parser.add_argument('--dataset', '-d',
+    type=str,
+    required=True,
+    choices=[
+        "eng_sentences",
+        "eng_sentences_rand_iv",
+        "wikipedia_text"
+    ]
+)
+args = parser.parse_args()
+
+d_config = dict(
+    eng_sentences = dict(
+        plain_text_file = "./data/englishSentences.csv",
+        encrypted_files = [
+            "./data/encrypted/128-bytes.csv",
+            "./data/encrypted/192-bytes.csv",
+            "./data/encrypted/256-bytes.csv",
+        ],
+    ),
+    eng_sentences_rand_iv = dict(
+        plain_text_file = "./data/wikipediaSentences.csv",
+        encrypted_files = [
+            "./data/encrypted/128-bytes-rand-iv.csv",
+            "./data/encrypted/192-bytes-rand-iv.csv",
+            "./data/encrypted/256-bytes-rand-iv.csv",
+        ],
+    )
+)
+dataset = d_config.get(args.dataset, None)
+assert dataset
+
+PLAIN_TEXT_DATA_FILE = dataset.get("plain_text_file")
+ENCRYPTED_DATA_FILES = dataset.get("encrypted_files")
 
 def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False):
     if b64_enc:
