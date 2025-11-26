@@ -1,6 +1,7 @@
 import subprocess
 import argparse
 from datasets import load_dataset
+from glob import glob
 import os
 
 parser = argparse.ArgumentParser(
@@ -24,7 +25,7 @@ args = parser.parse_args()
 
 d_config = dict(
     eng_sentences = dict(
-        data_file = "./data/englishSentences.csv",
+        data_dir = "./data/plain_text/engSentences",
         key_files = [
             "./data/keys/128-bytes.hex",
             "./data/keys/192-bytes.hex",
@@ -33,7 +34,7 @@ d_config = dict(
         data_name = None,
     ),
     wikipedia_text = dict(
-        data_file = "./data/wikipediaSentences.csv",
+        data_dir = "./data/plain_text/wikipedia",
         key_files = [
             "./data/keys/128-bytes.hex",
             "./data/keys/192-bytes.hex",
@@ -47,13 +48,13 @@ assert dataset
 
 ENCRYPT_SCRIPT = "./scripts/encrypt.sh"
 
-DATA_FILE = dataset.get("data_file", None)
+DATA_DIR = dataset.get("data_dir", None)
 KEY_FILES = dataset.get("key_files", None)
 DATA_NAME = dataset.get("data_name", None)
-assert DATA_FILE and KEY_FILES 
+assert  DATA_DIR and KEY_FILES 
 
-OUT_DIR = "./data/encrypted"
-
+OUT_DIR = f"./data/encrypted/{DATA_DIR}"
+data_files = glob(os.path.join(DATA_DIR, "**")) # type: ignore
 random_iv: bool = args.random_iv
 
 def encrypt(s, key, iv):
@@ -75,17 +76,22 @@ def encrypt(s, key, iv):
 
     return output
 
-dataset = load_dataset("csv", data_files=DATA_FILE, split="train")
+ds = load_dataset("csv", data_files=data_files, split="train")
 for key in KEY_FILES:
     iv = None
     if not random_iv: iv = f"{key}.iv"
     keyName = os.path.basename(key).removesuffix(".hex")
     print(f"encrypting sentences with {keyName} key")
     
-    enc = dataset.map(lambda sentence: {
+    enc = ds.map(lambda sentence: {
         "text": encrypt(str(sentence["text"]), key, iv)
-    }, num_proc=args.n_proc)
+    }, num_proc=args.n_proc) # type: ignore
     
-    fname = f"{OUT_DIR}/{keyName}{"-" + DATA_NAME if DATA_NAME else ""}{"-rand-iv" if random_iv else ""}.csv" # type: ignore
-    enc.to_csv(fname)
-    print(f"wrote file {fname}")
+    baseName = f"{OUT_DIR}/{keyName}{"-" + DATA_NAME if DATA_NAME else ""}{"-rand-iv" if random_iv else ""}" # type: ignore
+    num_shards = len(data_files)
+    for i in range(0, num_shards):
+        fname = f"{baseName}-shard_{i}.csv"
+        shard = enc.shard(num_shards=num_shards, index=i)
+        shard.to_csv(fname)
+        print(f"wrote file {fname}")
+        breakpoint()
