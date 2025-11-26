@@ -4,8 +4,8 @@
 
 # Big training data files
 results/
-data/**/**
-!data/keys/**
+data/**
+!data/keys/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

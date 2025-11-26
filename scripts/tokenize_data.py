@@ -3,11 +3,18 @@ import numpy as np
 import pickle
 import argparse
 import base64
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
+from glob import glob
 
 PAD_IDX = 256
 SOS_IDX = 257
 EOS_IDX = 258
+
+KEYS = [
+    "128-bytes",
+    "192-bytes",
+    "256-bytes"
+]
 
 parser = argparse.ArgumentParser(
     prog='ProgramName',
@@ -19,43 +26,38 @@ parser.add_argument('--dataset', '-d',
     required=True,
     choices=[
         "eng_sentences",
-        "eng_sentences_rand_iv",
         "wikipedia_text"
     ]
+)
+parser.add_argument('--random_iv', '-r',
+    action='store_true',
 )
 args = parser.parse_args()
 
 d_config = dict(
     eng_sentences = dict(
-        plain_text_file = "./data/englishSentences.csv",
-        encrypted_files = [
-            "./data/encrypted/128-bytes.csv",
-            "./data/encrypted/192-bytes.csv",
-            "./data/encrypted/256-bytes.csv",
-        ],
-    ),
-    eng_sentences_rand_iv = dict(
-        plain_text_file = "./data/englishSentences.csv",
-        encrypted_files = [
-            "./data/encrypted/128-bytes-rand-iv.csv",
-            "./data/encrypted/192-bytes-rand-iv.csv",
-            "./data/encrypted/256-bytes-rand-iv.csv",
-        ],
+        plain_text_dir = "./data/plain_text/engSentences",
+        encrypted_text_dir = "./data/encrypted/engSentences",
+        data_name = "engSentences",
     ),
     wikipedia_text = dict(
-        plain_text_file = "./data/wikipediaSentences.csv",
-        encrypted_files = [
-            "./data/encrypted/128-bytes-wiki.csv",
-            "./data/encrypted/192-bytes-wiki.csv",
-            "./data/encrypted/256-bytes-wiki.csv",
-        ],
+        plain_text_dir = "./data/plain_text/wikipedia",
+        encrypted_text_dir = "./data/encrypted/wikipedia",
+        data_name = "wikipedia"
     ),
 )
 dataset = d_config.get(args.dataset, None)
 assert dataset
 
-PLAIN_TEXT_DATA_FILE = dataset.get("plain_text_file")
-ENCRYPTED_DATA_FILES = dataset.get("encrypted_files")
+PLAIN_TEXT_DATA_DIR = dataset.get("plain_text_dir")
+ENCRYPTED_TEXT_DATA_DIR = dataset.get("encrypted_text_dir")
+DATA_NAME = dataset.get("data_name")
+assert PLAIN_TEXT_DATA_DIR and ENCRYPTED_TEXT_DATA_DIR and DATA_NAME
+
+random_iv: bool = args.random_iv
+ENCRYPTED_TEXT_DATA_DIR = f"{ENCRYPTED_TEXT_DATA_DIR}{"-rand-iv" if random_iv else ""}"
+DATA_NAME = f"{DATA_NAME}{"-rand-iv" if random_iv else ""}"
+OUT_DIR = f"./data/tokens/{DATA_NAME}"
 
 def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False):
     if b64_enc:
@@ -76,32 +78,42 @@ def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=Fa
     return byte_ids
 
 def get_max_len(ds):
-    arr = ds.to_pandas().to_numpy().reshape((-1))
-    return len(max(arr, key=len)) + 2 # we add two here as SOS AND EOS are added to original sentences
+    longest_idx = max(range(len(ds)), key=lambda i: len(ds[i]["text"]))
+    return len(ds[longest_idx]["text"]) + 2 # we add two here as SOS AND EOS are added to original sentences
 
-p_set = load_dataset("csv", data_files=PLAIN_TEXT_DATA_FILE, split="train")
+p_set_files = sorted(glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**")))
+p_set = load_dataset(
+    "csv", data_files=p_set_files, split="train",
+    download_mode="force_redownload", verification_mode="no_checks"
+)
 max_len = get_max_len(p_set)
-p_tokens = []
-for p in p_set:
-    p_tokens.append(byte_tokenize(p, max_len=max_len))
+p_tokens = p_set.map(
+    lambda sentence: {"tokens": byte_tokenize(sentence["text"], max_len=max_len)},
+    remove_columns="text"
+)
 
-basename = PLAIN_TEXT_DATA_FILE.removesuffix(".csv") # type: ignore
-p_tokenized_file = f"{basename}-tokens.pkl"
-with open(p_tokenized_file, "wb") as f:
-    pickle.dump(np.array(p_tokens, dtype=np.uint16), f)
+for k in KEYS:
+    c_set_dir = f"{ENCRYPTED_TEXT_DATA_DIR}/{k}"
+    c_set_files = sorted(glob(os.path.join(c_set_dir, "**")))
+    c_set = load_dataset(
+        "csv", data_files=c_set_files, split="train",
+        download_mode="force_redownload", verification_mode="no_checks"
+    )
 
-print(f"wrote tokenized file {p_tokenized_file}")
-
-for c_file in ENCRYPTED_DATA_FILES: # type: ignore
-    basename = os.path.basename(c_file).removesuffix(".csv")
-    c = np.loadtxt(c_file, delimiter=",", dtype=str).tolist()
-    max_len = get_max_len(c)
-
-    c_tokens = []
-    for c_i in c:
-        c_tokens.append(byte_tokenize(c_i, max_len=max_len, b64_enc=True))
+    max_len = get_max_len(c_set)
+    c_tokens = c_set.map(
+        lambda sentence: {"tokens": byte_tokenize(sentence["text"], max_len=max_len)},
+        remove_columns="text"
+    )
+    merged = Dataset.from_dict({
+        "p_tokens": p_tokens["tokens"], # type: ignore
+        "c_tokens": c_tokens["tokens"]  # type: ignore
+    })
     
-    pkl_file = f"./data/{basename}-tokens.pkl"
-    with open(pkl_file, "wb") as f:
-        pickle.dump(np.array(c_tokens, dtype=np.uint16), f)
-    print(f"wrote tokenized encrypted sentences file {pkl_file}")
+    baseName = f"{OUT_DIR}/{k}"
+    os.makedirs(baseName, exist_ok=True)
+    num_shards = len(c_set_files)
+    for i in range(0, num_shards):
+        fname = f"{baseName}/shard_{i}"
+        shard = merged.shard(num_shards=num_shards, index=i)
+        shard.save_to_disk(fname)

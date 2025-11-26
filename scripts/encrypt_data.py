@@ -53,11 +53,11 @@ KEY_FILES = dataset.get("key_files", None)
 DATA_NAME = dataset.get("data_name", None)
 assert  DATA_DIR and KEY_FILES and DATA_NAME
 
-OUT_DIR = f"./data/encrypted/{DATA_NAME}"
-os.makedirs(OUT_DIR, exist_ok=True)
-
-data_files = glob(os.path.join(DATA_DIR, "**")) # type: ignore
 random_iv: bool = args.random_iv
+
+OUT_DIR = f"./data/encrypted/{DATA_NAME}{"-rand-iv" if random_iv else ""}"
+
+data_files = sorted(glob(os.path.join(DATA_DIR, "**"))) # type: ignore
 
 def encrypt(s, key, iv):
     p_args = [ENCRYPT_SCRIPT, f"--key={key}"]
@@ -78,7 +78,11 @@ def encrypt(s, key, iv):
 
     return output
 
-ds = load_dataset("csv", data_files=data_files, split="train")
+ds = load_dataset(
+    "csv", 
+    data_files=data_files, split="train", 
+    download_mode="force_redownload", verification_mode="no_checks"
+)
 for key in KEY_FILES:
     iv = None
     if not random_iv: iv = f"{key}.iv"
@@ -89,10 +93,11 @@ for key in KEY_FILES:
         "text": encrypt(str(sentence["text"]), key, iv)
     }, num_proc=args.n_proc) # type: ignore
     
-    baseName = f"{OUT_DIR}/{keyName}-{DATA_NAME}{"-rand-iv" if random_iv else ""}" # type: ignore
+    baseName = f"{OUT_DIR}/{keyName}" # type: ignore
+    os.makedirs(baseName, exist_ok=True)
     num_shards = len(data_files)
     for i in range(0, num_shards):
-        fname = f"{baseName}-shard_{i}.csv"
+        fname = f"{baseName}/shard_{i}.csv"
         shard = enc.shard(num_shards=num_shards, index=i) # type: ignore
         shard.to_csv(fname)
         print(f"wrote file {fname}")
