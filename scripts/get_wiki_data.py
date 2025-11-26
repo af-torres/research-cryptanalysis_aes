@@ -10,7 +10,6 @@ def shard_into_files(ds, max_shard_len=3000):
     n = len(ds)
     num_shards = n // max_shard_len
 
-    breakpoint()
     for i in range(num_shards):
         shard = ds.shard(num_shards=num_shards, index=i)
         shard.to_csv(f"{DATA_DIR}/shard_{i}.csv")

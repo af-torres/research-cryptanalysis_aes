@@ -96,4 +96,3 @@ for key in KEY_FILES:
         shard = enc.shard(num_shards=num_shards, index=i) # type: ignore
         shard.to_csv(fname)
         print(f"wrote file {fname}")
-        breakpoint()
