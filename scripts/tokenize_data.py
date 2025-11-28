@@ -1,6 +1,4 @@
 import os
-import numpy as np
-import pickle
 import argparse
 import base64
 from datasets import load_dataset, Dataset
@@ -112,8 +110,4 @@ for k in KEYS:
     
     baseName = f"{OUT_DIR}/{k}"
     os.makedirs(baseName, exist_ok=True)
-    num_shards = len(c_set_files)
-    for i in range(0, num_shards):
-        fname = f"{baseName}/shard_{i}"
-        shard = merged.shard(num_shards=num_shards, index=i)
-        shard.save_to_disk(fname)
+    merged.save_to_disk(baseName)
