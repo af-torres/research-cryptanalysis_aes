@@ -76,8 +76,12 @@ def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=Fa
     return byte_ids
 
 def get_max_len(ds):
-    longest_idx = max(range(len(ds)), key=lambda i: len(ds[i]["text"]))
-    return len(ds[longest_idx]["text"]) + 2 # we add two here as SOS AND EOS are added to original sentences
+    max_bytes = 0
+    for i in range(len(ds)):
+        b = len(ds[i]["text"].encode("utf-8"))
+        if b > max_bytes:
+            max_bytes = b
+    return max_bytes + 2  # SOS + EOS
 
 p_set_files = sorted(glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**")))
 p_set = load_dataset(
