@@ -38,10 +38,11 @@ class Decoder(nn.Module):
         return prediction, hidden, cell
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, device):
+    def __init__(self, encoder, decoder, dropout, device):
         super(Seq2Seq, self).__init__()
         self.encoder: Encoder = encoder
         self.decoder: Decoder = decoder
+        self.dropout = nn.Dropout(dropout)
         self.device = device
     
     def forward(self, src, trg, teacher_forcing_ratio=0.5):
@@ -54,6 +55,7 @@ class Seq2Seq(nn.Module):
         outputs = torch.zeros(batch_size, trg_len, trg_vocab_size).to(self.device)
         
         hidden, cell = self.encoder(src)
+        hidden = self.dropout(hidden)
         
         # First input to decoder is <sos> token
         input = trg[:, 0]
@@ -68,9 +70,9 @@ class Seq2Seq(nn.Module):
             
         return outputs
 
-def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, device) -> Seq2Seq:
+def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, dropout, device) -> Seq2Seq:
     encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
     decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx).to(device)
-    seq2seq = Seq2Seq(encoder, decoder, device)
+    seq2seq = Seq2Seq(encoder, decoder, dropout, device)
 
     return seq2seq
