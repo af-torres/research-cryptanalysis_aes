@@ -49,7 +49,7 @@ class TestMathUtils(unittest.TestCase):
             "csv", data_files=p_set_files, split="train",
         )
 
-        p_set_len, c_set_len = len(p_set), len(c_set)
+        p_set_len, c_set_len = len(p_set), len(c_set) # type: ignore
         self.assertEqual(
             p_set_len, c_set_len, 
         )
