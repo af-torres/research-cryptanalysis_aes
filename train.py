@@ -98,6 +98,7 @@ model_config = dict(
     hidden_dim = 500,
     output_dim = EOS_IDX + 1,
     pad_idx = PAD_IDX,
+    dropout = 0.5,
     device = device
 )
 model = build_model(**model_config)

@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
 class TestMathUtils(unittest.TestCase):
-    def __assert_mapping_encrypted_subset(self, encrypted_sentences, sentences, key, iv):
+    def __assert_mapping_of_encrypted_subset(self, encrypted_sentences, sentences, key, iv):
         for i, e in enumerate(encrypted_sentences):
             s = sentences[i]
             expected = encrypt(s, key=key, iv=iv)
@@ -28,7 +28,7 @@ class TestMathUtils(unittest.TestCase):
 
         sentences = p_set["text"].to_list()
         encrypted_sentences = c_set["text"].to_list()
-        self.__assert_mapping_encrypted_subset(encrypted_sentences, sentences, key, iv)
+        self.__assert_mapping_of_encrypted_subset(encrypted_sentences, sentences, key, iv)
 
 
     def test_loading_sets(self):
@@ -59,7 +59,7 @@ class TestMathUtils(unittest.TestCase):
 
         p_subset = p_set.select(random_sample) # type: ignore
         c_subset = c_set.select(random_sample) # type: ignore
-        self.__assert_mapping_encrypted_subset(
+        self.__assert_mapping_of_encrypted_subset(
             c_subset["text"], p_subset["text"], 
             key, iv
         )

@@ -1,18 +1,32 @@
 import torch
 import torch.nn as nn
 
+class LockedDropout(nn.Module):
+    def __init__(self, p):
+        super().__init__()
+        self.p = p
+
+    def forward(self, x):
+        if not self.training or self.p == 0:
+            return x
+        mask = x.new_empty(1, x.size(1), x.size(2)).bernoulli_(1 - self.p)
+        mask = mask / (1 - self.p)
+        return x * mask
+    
 class Encoder(nn.Module):
-    def __init__(self, input_dim, embed_dim, hidden_dim, pad_idx, n_layers=1):
+    def __init__(self, input_dim, embed_dim, hidden_dim, pad_idx, n_layers=1, dropout=0.5):
         super(Encoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
 
         self.embedding = nn.Embedding(input_dim, embed_dim, padding_idx=pad_idx)
+        self.locked_dropout = LockedDropout(dropout)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, batch_first=True)
 
     def forward(self, src):
         # src: [batch_size, src_len]
         embedded = self.embedding(src)  # [batch_size, src_len, embed_dim]
+        embedded = self.locked_dropout(embedded)
         outputs, (hidden, cell) = self.lstm(embedded)
         # outputs: [batch_size, src_len, hidden_dim]
         # hidden/cell: [n_layers, batch_size, hidden_dim]
@@ -20,13 +34,14 @@ class Encoder(nn.Module):
         return hidden, cell
 
 class Decoder(nn.Module):
-    def __init__(self, output_dim, embed_dim, hidden_dim, pad_idx, n_layers=1):
+    def __init__(self, output_dim, embed_dim, hidden_dim, pad_idx, n_layers=1, dropout=0.5):
         super(Decoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
         
         self.embedding = nn.Embedding(output_dim, embed_dim, padding_idx=pad_idx)
         self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, batch_first=True)
+        self.dropout = nn.Dropout(dropout)
         self.fc_out = nn.Linear(hidden_dim, output_dim)
     
     def forward(self, input, hidden, cell):
@@ -34,6 +49,7 @@ class Decoder(nn.Module):
         input = input.unsqueeze(1)  # [batch_size, 1]
         embedded = self.embedding(input)  # [batch_size, 1, embed_dim]
         output, (hidden, cell) = self.lstm(embedded, (hidden, cell))
+        output = self.dropout(output)
         prediction = self.fc_out(output.squeeze(1))  # [batch_size, output_dim]
         
         return prediction, hidden, cell
@@ -56,7 +72,6 @@ class Seq2Seq(nn.Module):
         outputs = torch.zeros(batch_size, trg_len, trg_vocab_size).to(self.device)
         
         hidden, cell = self.encoder(src)
-        hidden = self.dropout(hidden)
         
         # First input to decoder is <sos> token
         input = trg[:, 0]
