@@ -1,5 +1,5 @@
 from datasets import load_dataset
-from utils import shard_into_files
+from scripts.utils import shard_into_files
 import os
 
 DATA_DIR = "./data/plain_text/wikipedia"

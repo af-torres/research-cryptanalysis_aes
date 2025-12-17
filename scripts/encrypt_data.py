@@ -2,7 +2,7 @@ import subprocess
 import argparse
 from datasets import load_dataset
 from glob import glob
-from utils import shard_into_files
+from scripts.utils import shard_into_files
 import os
 
 ENCRYPT_SCRIPT = "./scripts/encrypt.sh"
