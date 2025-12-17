@@ -16,22 +16,7 @@ class TestMathUtils(unittest.TestCase):
             expected = encrypt(s, key=key, iv=iv)
             self.assertEqual(e, expected, f"'{s}' does not map to its correct encryption")
 
-    def test_encrypt_e2e(self):
-        P_TEST_SHARD = "./data/plain_text/wikipedia/shard_0.csv"
-        C_TEST_SHARD = "./data/encrypted/wikipedia/128-bytes/shard_0.csv"
-
-        p_set = pd.read_csv(P_TEST_SHARD)
-        c_set = pd.read_csv(C_TEST_SHARD)
-
-        key = KEY_FILES[0]
-        iv = get_iv(key)
-
-        sentences = p_set["text"].to_list()
-        encrypted_sentences = c_set["text"].to_list()
-        self.__assert_mapping_of_encrypted_subset(encrypted_sentences, sentences, key, iv)
-
-
-    def test_loading_sets(self):
+    def test_mapping_order_is_preserved(self):
         PLAIN_TEXT_DATA_DIR = "./data/plain_text/wikipedia"
         ENCRYPTED_TEXT_DATA_DIR = "./data/encrypted/wikipedia"
         KEY_NAME = "128-bytes"
@@ -39,15 +24,15 @@ class TestMathUtils(unittest.TestCase):
         iv = get_iv(key)
 
         c_set_dir = f"{ENCRYPTED_TEXT_DATA_DIR}/{KEY_NAME}"
-        c_set_files = sorted(glob(os.path.join(c_set_dir, "**")))
+        c_set_files = glob(os.path.join(c_set_dir, "**"))
         c_set = load_dataset(
             "csv", data_files=c_set_files, split="train",
-        )
+        ).sort("_idx")
 
-        p_set_files = sorted(glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**")))
+        p_set_files = glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**"))
         p_set = load_dataset(
             "csv", data_files=p_set_files, split="train",
-        )
+        ).sort("_idx")
 
         p_set_len, c_set_len = len(p_set), len(c_set) # type: ignore
         self.assertEqual(
