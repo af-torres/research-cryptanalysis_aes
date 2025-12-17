@@ -22,9 +22,10 @@ def split_to_chunks(batch, max_size=500):
     return {"text": new_text}
 
 ds = load_dataset("Salesforce/wikitext", "wikitext-103-v1", split="train")
-ds = ds.filter(lambda sentence: sentence["text"] is not None and sentence["text"] != "") # remove blank lines
+ds = ds.filter(lambda sentence: sentence["text"] is not None and sentence["text"].strip() != "") # remove blank lines
 ds = ds.map(lambda sentence: {
     "text": sentence["text"].strip().replace("<unk>", " ")
 })
 ds = ds.map(split_to_chunks, batched=True)
 shard_into_files(ds)
+

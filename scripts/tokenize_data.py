@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(
     description='What the program does',
     epilog='Text at the bottom of help'
 )
-parser.add_argument('--dataset', '-d',
+parser.add_argument('-d', '--dataset', 
     type=str,
     required=True,
     choices=[
@@ -27,7 +27,7 @@ parser.add_argument('--dataset', '-d',
         "wikipedia_text"
     ]
 )
-parser.add_argument('--random_iv', '-r',
+parser.add_argument('-r', '--random_iv',
     action='store_true',
 )
 args = parser.parse_args()
@@ -78,7 +78,10 @@ def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=Fa
 def get_max_len(ds):
     max_bytes = 0
     for i in range(len(ds)):
-        b = len(ds[i]["text"].encode("utf-8"))
+        text = ds[i]["text"]
+        if text is None: continue
+
+        b = len(text.encode("utf-8"))
         if b > max_bytes:
             max_bytes = b
     return max_bytes + 2  # SOS + EOS
@@ -101,7 +104,6 @@ for k in KEYS:
         "csv", data_files=c_set_files, split="train",
         download_mode="force_redownload", verification_mode="no_checks"
     )
-
     max_len = get_max_len(c_set)
     c_tokens = c_set.map(
         lambda sentence: {"tokens": byte_tokenize(sentence["text"], max_len=max_len)},

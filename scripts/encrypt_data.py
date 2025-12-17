@@ -80,18 +80,20 @@ if __name__ == "__main__":
     data_files = sorted(glob(os.path.join(DATA_DIR, "**"))) # type: ignore
     ds = load_dataset(
         "csv", 
-        data_files=data_files, split="train", 
-        download_mode="force_redownload", verification_mode="no_checks"
+        data_files=data_files, split="train"
     )
     for key in KEY_FILES:
         iv = get_iv(key, random_iv)
         keyName = os.path.basename(key).removesuffix(".hex")
         print(f"encrypting sentences with {keyName} key")
 
-        enc = ds.map(lambda sentence: {
-            "text": encrypt(str(sentence["text"]), key, iv)
-        }, num_proc=args.n_proc) # type: ignore
-        
+        enc = ds.map(
+            lambda sentence: {
+                "text": encrypt(sentence["text"], key, iv)
+            },
+            num_proc=args.n_proc,
+        )
+
         baseName = f"{OUT_DIR}/{keyName}" # type: ignore
         os.makedirs(baseName, exist_ok=True)
 

@@ -6,11 +6,15 @@ from datasets import load_dataset
 import os
 import random
 
+import warnings
+warnings.filterwarnings("ignore", category=ResourceWarning)
+
 class TestMathUtils(unittest.TestCase):
     def __assert_mapping_encrypted_subset(self, encrypted_sentences, sentences, key, iv):
         for i, e in enumerate(encrypted_sentences):
-            expected = encrypt(sentences[i], key=key, iv=iv)
-            self.assertEqual(e, expected)
+            s = sentences[i]
+            expected = encrypt(s, key=key, iv=iv)
+            self.assertEqual(e, expected, f"'{s}' does not map to its correct encryption")
 
     def test_encrypt_e2e(self):
         P_TEST_SHARD = "./data/plain_text/wikipedia/shard_0.csv"
@@ -38,19 +42,16 @@ class TestMathUtils(unittest.TestCase):
         c_set_files = sorted(glob(os.path.join(c_set_dir, "**")))
         c_set = load_dataset(
             "csv", data_files=c_set_files, split="train",
-            download_mode="force_redownload", verification_mode="no_checks"
         )
 
         p_set_files = sorted(glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**")))
         p_set = load_dataset(
             "csv", data_files=p_set_files, split="train",
-            download_mode="force_redownload", verification_mode="no_checks"
         )
 
         p_set_len, c_set_len = len(p_set), len(c_set)
         self.assertEqual(
             p_set_len, c_set_len, 
-            "plain text set and ciphered text set have different sizes"
         )
 
         sample_size = 500
