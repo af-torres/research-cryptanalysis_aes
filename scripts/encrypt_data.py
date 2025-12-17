@@ -2,6 +2,7 @@ import subprocess
 import argparse
 from datasets import load_dataset
 from glob import glob
+from utils import shard_into_files
 import os
 
 ENCRYPT_SCRIPT = "./scripts/encrypt.sh"
@@ -77,7 +78,7 @@ if __name__ == "__main__":
 
     OUT_DIR = f"./data/encrypted/{DATA_NAME}{"-rand-iv" if random_iv else ""}"
 
-    data_files = sorted(glob(os.path.join(DATA_DIR, "**"))) # type: ignore
+    data_files = glob(os.path.join(DATA_DIR, "**"))
     ds = load_dataset(
         "csv", 
         data_files=data_files, split="train"
@@ -89,22 +90,14 @@ if __name__ == "__main__":
 
         enc = ds.map(
             lambda sentence: {
+                "_idx": sentence["_idx"],
                 "text": encrypt(sentence["text"], key, iv)
             },
-            num_proc=args.n_proc,
+            num_proc=args.n_proc, # type: ignore
         )
 
         baseName = f"{OUT_DIR}/{keyName}" # type: ignore
         os.makedirs(baseName, exist_ok=True)
 
         num_shards = len(data_files)
-        n = len(enc)
-        rows_per_shard = n // num_shards
-        for i in range(num_shards):
-            start = i * rows_per_shard
-            end = (i+1) * rows_per_shard if i < num_shards - 1 else n
-            shard = enc.select(range(start, end)) # type: ignore
-
-            fname = f"{baseName}/shard_{i}.csv"
-            shard.to_csv(fname)
-            print(f"wrote file {fname}")
+        shard_into_files(enc, baseName, num_shards)
