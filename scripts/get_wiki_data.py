@@ -27,5 +27,9 @@ ds = ds.map(lambda sentence: {
     "text": sentence["text"].strip().replace("<unk>", " ")
 })
 ds = ds.map(split_to_chunks, batched=True)
+ds = ds.map(lambda text, idx: {
+    "_idx": idx,
+    "text": text,
+}, with_indices=True)
 shard_into_files(ds)
 
