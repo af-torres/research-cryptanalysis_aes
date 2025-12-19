@@ -48,12 +48,6 @@ args = parser.parse_args()
 print(f"training model {args}")
 
 DATASET_DIR = dict(
-    short_128 = "./data/tokens/engSentences/128-bytes",
-    short_192 = "./data/tokens/engSentences/192-bytes",
-    short_256 = "./data/tokens/engSentences/256-bytes",
-    short_rand_iv_128 = "./data/tokens/engSentences/128-bytes-rand-iv",
-    short_rand_iv_192 = "./data/tokens/engSentences/192-bytes-rand-iv",
-    short_rand_iv_256 = "./data/tokens/engSentences/256-bytes-rand-iv",
     wiki_128 = "./data/tokens/wikipedia/128-bytes",
     wiki_192 = "./data/tokens/wikipedia/192-bytes",
     wiki_256 = "./data/tokens/wikipedia/256-bytes",
@@ -62,7 +56,6 @@ RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
 C_COLUMN = "c_tokens"
 P_COLUMN = "p_tokens"
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_id = uuid.uuid4().hex
