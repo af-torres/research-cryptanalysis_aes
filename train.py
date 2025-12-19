@@ -48,9 +48,18 @@ args = parser.parse_args()
 print(f"training model {args}")
 
 DATASET_DIR = dict(
-    wiki_128 = "./data/tokens/wikipedia/128-bytes",
-    wiki_192 = "./data/tokens/wikipedia/192-bytes",
-    wiki_256 = "./data/tokens/wikipedia/256-bytes",
+    wiki_128 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia/encrypted/128-bytes",
+    ),
+    wiki_192 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia/encrypted/192-bytes",
+    ),
+    wiki_256 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia/encrypted/256-bytes",
+    ),
 )
 RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
@@ -61,17 +70,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_id = uuid.uuid4().hex
 
 dataset = args.dataset
-ds_dir = DATASET_DIR.get(dataset, "")
-assert ds_dir != ""
+ds_config = DATASET_DIR.get(dataset)
+assert ds_config
+
+plain_text_ds_dir = ds_config.get("plain_text")
+encrypted_text_ds_dir = ds_config.get("encrypted_text")
+assert plain_text_ds_dir and encrypted_text_ds_dir
 
 ds_max_size = args.ds_max_size
-ds = Dataset.load_from_disk(ds_dir).with_format("torch", device=device)
-n = len(ds)
+ds_c = Dataset.load_from_disk(encrypted_text_ds_dir).sort("_idx").with_format("torch", device=device)
+ds_p = Dataset.load_from_disk(plain_text_ds_dir).sort("_idx").with_format("torch", device=device)
+assert len(ds_c) == len(ds_p)
+
+n = len(ds_p)
 ds_size = n if n < ds_max_size else ds_max_size
 
 random.seed(42)
 shuffle_idx = random.sample(np.arange(n).tolist(), ds_size)
-ds = ds.select(shuffle_idx)
+ds_c = ds_c.select(shuffle_idx)
+ds_p = ds_p.select(shuffle_idx)
+ds = Dataset.from_dict({
+    C_COLUMN: ds_c["tokens"],
+    P_COLUMN: ds_p["tokens"]
+})
 
 tr_ptr = 0
 vl_ptr = math.floor(.8 * ds_size)
