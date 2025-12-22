@@ -122,8 +122,8 @@ def eval(model, loss_fn, eval_idx):
     total_tokens = 0
     for batch in dataloader:
         idx = batch[INDEX_COLUMN].numpy()
-        X, Y = torch.tensor(ds_c[idx][TOKENS_COLUMN]).to(device), \
-            torch.tensor(ds_p[idx][TOKENS_COLUMN]).to(device)
+        X, Y = ds_c.select(idx)[:][TOKENS_COLUMN].to(device), \
+            ds_p.select(idx)[:][TOKENS_COLUMN].to(device)
         Y_hat = model(X, Y, 1)
 
         n_tokens = (Y != PAD_IDX).sum().item()
