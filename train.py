@@ -46,7 +46,6 @@ parser.add_argument('-ms', '--ds_max_size',
     type=int, default=30000
 )
 args = parser.parse_args()
-
 print(f"training model {args}")
 
 DATASET_DIR = dict(
@@ -110,28 +109,31 @@ model_config = dict(
     output_dim = EOS_IDX + 1,
     pad_idx = PAD_IDX,
     dropout = 0.5,
-    device = device
 )
-model = build_model(**model_config)
+model = build_model(**model_config, device = device)
 loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 optimizer = torch.optim.AdamW(model.parameters())
 
-def eval(model, loss_fn, idx):
-    MAX_EVAL_SUBSET_SIZE = 5000
+def eval(model, loss_fn, eval_idx):
+    ds_e = Dataset.from_dict({INDEX_COLUMN: eval_idx.tolist()})
+    dataloader = DataLoader(ds_e, batch_size=batch_size) # type: ignore
     
-    n = len(idx)
-    e_size = MAX_EVAL_SUBSET_SIZE if n > MAX_EVAL_SUBSET_SIZE else n
-    idx_sampled = random.sample(idx.tolist(), e_size)
+    loss_sum = 0.0
+    total_tokens = 0
+    for batch in dataloader:
+        idx = batch[INDEX_COLUMN].numpy()
+        X, Y = torch.tensor(ds_c[idx][TOKENS_COLUMN]).to(device), \
+            torch.tensor(ds_p[idx][TOKENS_COLUMN]).to(device)
+        Y_hat = model(X, Y, 1)
 
-    X, Y = ds_c.select(idx_sampled)[:][TOKENS_COLUMN].to(device), \
-        ds_p.select(idx_sampled)[:][TOKENS_COLUMN].to(device)
-    Y_hat = model(X, Y, 1)
-    loss_item = loss_fn(
+        n_tokens = (Y != PAD_IDX).sum().item()
+        loss_sum += loss_fn(
             Y_hat.reshape(-1, Y_hat.size(-1)),
             Y.reshape(-1)
-        ).item()
+        ).item() * n_tokens
+        total_tokens += n_tokens
     
-    return loss_item
+    return loss_sum / total_tokens
 
 tr_loss = []
 vl_loss = []
@@ -174,4 +176,7 @@ with open(training_results_file, "wb") as f:
     ), f)
 
 with open(LOG_FILE, "a") as f:
-    f.write(f"{run_id}: dataset={dataset}\n")
+    f.write(
+        f"{run_id}: "
+        f"{"; ".join([f"{k}={v}" for k, v in args.__dict__.items()])};\n"
+    )
