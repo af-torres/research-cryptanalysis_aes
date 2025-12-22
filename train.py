@@ -117,7 +117,7 @@ loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 optimizer = torch.optim.AdamW(model.parameters())
 
 def eval(model, loss_fn, idx):
-    MAX_EVAL_SUBSET_SIZE = 30000
+    MAX_EVAL_SUBSET_SIZE = 5000
     
     n = len(idx)
     e_size = MAX_EVAL_SUBSET_SIZE if n > MAX_EVAL_SUBSET_SIZE else n
