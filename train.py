@@ -15,6 +15,7 @@ import random
 import math
 import uuid
 import os
+import time
 
 parser = argparse.ArgumentParser(
     prog='ProgramName',
@@ -135,6 +136,9 @@ def eval(model, loss_fn, eval_idx):
     
     return loss_sum / total_tokens
 
+start_t = time.perf_counter()
+print("start model training")
+
 tr_loss = []
 vl_loss = []
 for e in range(1, epochs + 1):
@@ -166,6 +170,10 @@ for e in range(1, epochs + 1):
 
     if e % 10 == 0: print(f"epoch {e}: training_loss={tr_loss_item}; validation_loss={vl_loss_item};")
 
+end_t = time.perf_counter()
+elapsed = end_t - start_t
+print(f"trained model succesfully in {elapsed:.3f} s")
+
 os.makedirs(RESULTS_DIR, exist_ok=True)
 training_results_file = f"{RESULTS_DIR}/{run_id}.pkl"
 with open(training_results_file, "wb") as f:
@@ -174,9 +182,11 @@ with open(training_results_file, "wb") as f:
         vl_loss = vl_loss,
         model_config = model_config,
     ), f)
+print(f"wrote results to {training_results_file}")
 
 with open(LOG_FILE, "a") as f:
     f.write(
         f"{run_id}: "
         f"{"; ".join([f"{k}={v}" for k, v in args.__dict__.items()])};\n"
     )
+print(f"appened run info to {LOG_FILE}")
