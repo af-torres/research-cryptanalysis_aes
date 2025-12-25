@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 from model import build_model
 from dataset import PAD_IDX, EOS_IDX
 
-import pyarrow as pa
 from datasets import Dataset
 
 import pickle
@@ -32,6 +31,9 @@ parser.add_argument('-d', '--dataset', choices = [
         'wiki_128',
         'wiki_192',
         'wiki_256',
+        'wiki_rand_iv_128',
+        'wiki_rand_iv_192',
+        'wiki_rand_iv_256',
     ],
     required=True,
 )
@@ -62,6 +64,19 @@ DATASET_DIR = dict(
         plain_text = "./data/tokens/wikipedia/plain_text",
         encrypted_text = "./data/tokens/wikipedia/encrypted/256-bytes",
     ),
+    wiki_rand_iv_128 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/128-bytes",
+    ),
+    wiki_rand_iv_192 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/192-bytes",
+    ),
+    wiki_rand_iv_256 = dict(
+        plain_text = "./data/tokens/wikipedia/plain_text",
+        encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/256-bytes",
+    ),
+
 )
 RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
@@ -190,3 +205,4 @@ with open(LOG_FILE, "a") as f:
         f"{"; ".join([f"{k}={v}" for k, v in args.__dict__.items()])};\n"
     )
 print(f"appened run info to {LOG_FILE}")
+
