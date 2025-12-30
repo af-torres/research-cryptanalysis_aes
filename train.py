@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torchmetrics import MetricCollection, Accuracy, Precision, Recall, F1Score
 
 from methods.lstm import build_model as lstm
 from methods.gru import build_model as gru
@@ -100,6 +101,13 @@ INDEX_COLUMN = "_idx"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_id = uuid.uuid4().hex
+metrics = MetricCollection({
+    'accuracy': Accuracy(task='multiclass', num_classes=EOS_IDX + 1, ignore_index=PAD_IDX),
+    'precision': Precision(task='multiclass', num_classes=EOS_IDX + 1, ignore_index=PAD_IDX),
+    'recall': Recall(task='multiclass', num_classes=EOS_IDX + 1, ignore_index=PAD_IDX),
+    'f1': F1Score(task='multiclass', num_classes=EOS_IDX + 1, ignore_index=PAD_IDX)
+})
+metrics = metrics.to(device)
 
 dataset = args.dataset
 ds_config = DATASET_DIR.get(dataset)
@@ -160,20 +168,29 @@ def eval(model, loss_fn, eval_idx):
             ds_p.select(idx)[:][TOKENS_COLUMN].to(device)
         Y_hat = model(X, Y, TEACHER_FORCE)
 
+        Y_hat = Y_hat.reshape(-1, Y_hat.size(-1))
+        Y = Y.reshape(-1)
+        
+        metrics.update(Y_hat.argmax(dim=-1), Y)
         n_tokens = (Y != PAD_IDX).sum().item()
         loss_sum += loss_fn(
-            Y_hat.reshape(-1, Y_hat.size(-1)),
-            Y.reshape(-1)
+            Y_hat,
+            Y
         ).item() * n_tokens
         total_tokens += n_tokens
+
+    metrics_results = metrics.compute()
+    metrics.reset()
     
-    return loss_sum / total_tokens
+    return loss_sum / total_tokens, metrics_results
 
 start_t = time.perf_counter()
 print("start model training")
 
 tr_loss = []
+tr_metrics = []
 vl_loss = []
+vl_metrics = []
 for e in range(1, epochs + 1):
     model.train()
     for batch in dataloader:
@@ -196,10 +213,13 @@ for e in range(1, epochs + 1):
         idx_tr = ds_tr[INDEX_COLUMN][:]
         idx_vl = ds_vl[INDEX_COLUMN][:]
 
-        tr_loss_item = eval(model, loss_fn, idx_tr)
+        tr_loss_item, tr_metrics_item = eval(model, loss_fn, idx_tr)
         tr_loss.append(tr_loss_item)
-        vl_loss_item = eval(model, loss_fn, idx_vl)
+        tr_metrics.append(tr_metrics_item)
+        
+        vl_loss_item, vl_metrics_item = eval(model, loss_fn, idx_vl)
         vl_loss.append(vl_loss_item)
+        vl_metrics.append(vl_metrics_item)
 
     if e % 10 == 0: print(f"epoch {e}: training_loss={tr_loss_item}; validation_loss={vl_loss_item};")
 
@@ -212,7 +232,9 @@ training_results_file = f"{RESULTS_DIR}/{run_id}.pkl"
 with open(training_results_file, "wb") as f:
     pickle.dump(dict(
         tr_loss = tr_loss,
+        tr_metrics = tr_metrics,
         vl_loss = vl_loss,
+        vl_metrics = vl_metrics,
         model_config = model_config,
     ), f)
 print(f"wrote results to {training_results_file}")
