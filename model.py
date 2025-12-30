@@ -54,7 +54,7 @@ class Decoder(nn.Module):
         
         return prediction, hidden, cell
 
-class Seq2Seq(nn.Module):
+class LSTMSeq2Seq(nn.Module):
     def __init__(self, encoder, decoder, dropout, device):
         super(Seq2Seq, self).__init__()
         self.encoder: Encoder = encoder
@@ -89,6 +89,6 @@ class Seq2Seq(nn.Module):
 def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, dropout, device) -> Seq2Seq:
     encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
     decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx).to(device)
-    seq2seq = Seq2Seq(encoder, decoder, dropout, device)
+    seq2seq = LSTMSeq2Seq(encoder, decoder, dropout, device)
 
     return seq2seq

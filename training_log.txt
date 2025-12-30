@@ -1,3 +1,6 @@
 98f26a02c2da47a499e9e45a8ad1cd9f: dataset=wiki_192; epochs=100; batch_size=500; ds_max_size=30000;
 ae31177f86884fc5b377b93252568a4d: dataset=wiki_128; epochs=100; batch_size=500; ds_max_size=30000;
 4c525fb573a34f24ba352adae4a5da3a: dataset=wiki_256; epochs=100; batch_size=500; ds_max_size=30000;
+e6e1b26ecfce46b1b52f2c133cb6df2e: dataset=wiki_rand_iv_192; epochs=100; batch_size=500; ds_max_size=30000;
+7a86e7c1ede6413bbd9dead1d1915f9e: dataset=wiki_rand_iv_256; epochs=100; batch_size=500; ds_max_size=30000;
+1baa729f819347a7941456c83956f3a3: dataset=wiki_rand_iv_128; epochs=100; batch_size=500; ds_max_size=30000;
