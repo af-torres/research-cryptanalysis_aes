@@ -1,18 +1,7 @@
 import torch
 import torch.nn as nn
+from methods.regularization import LockedDropout
 
-class LockedDropout(nn.Module):
-    def __init__(self, p):
-        super().__init__()
-        self.p = p
-
-    def forward(self, x):
-        if not self.training or self.p == 0:
-            return x
-        mask = x.new_empty(1, x.size(1), x.size(2)).bernoulli_(1 - self.p)
-        mask = mask / (1 - self.p)
-        return x * mask
-    
 class Encoder(nn.Module):
     def __init__(self, input_dim, embed_dim, hidden_dim, pad_idx, n_layers=1, dropout=0.5):
         super(Encoder, self).__init__()
@@ -54,11 +43,11 @@ class Decoder(nn.Module):
         
         return prediction, hidden, cell
 
-class LSTMSeq2Seq(nn.Module):
+class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, dropout, device):
         super(Seq2Seq, self).__init__()
-        self.encoder: Encoder = encoder
-        self.decoder: Decoder = decoder
+        self.encoder = encoder
+        self.decoder = decoder
         self.dropout = nn.Dropout(dropout)
         self.device = device
     
@@ -89,6 +78,6 @@ class LSTMSeq2Seq(nn.Module):
 def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, dropout, device) -> Seq2Seq:
     encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
     decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx).to(device)
-    seq2seq = LSTMSeq2Seq(encoder, decoder, dropout, device)
+    seq2seq = Seq2Seq(encoder, decoder, dropout, device)
 
     return seq2seq

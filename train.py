@@ -3,7 +3,9 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from model import build_model
+from methods.lstm import build_model as lstm
+from methods.gru import build_model as gru
+from methods.rnn import build_model as rnn
 from dataset import PAD_IDX, EOS_IDX
 
 from datasets import Dataset
@@ -20,6 +22,13 @@ parser = argparse.ArgumentParser(
     prog='ProgramName',
     description='What the program does',
     epilog='Text at the bottom of help'
+)
+parser.add_argument('-m', '--model', choices=[
+        'lstm',
+        'gru',
+        'rnn',
+    ],
+    default='lstm'
 )
 parser.add_argument('-d', '--dataset', choices = [
         'short_128',
@@ -78,6 +87,12 @@ DATASET_DIR = dict(
     ),
 
 )
+MODELS = dict(
+    lstm = lstm,
+    gru = gru,
+    rnn = rnn
+)
+
 RESULTS_DIR = "./results"
 LOG_FILE = "./training_log.txt"
 TOKENS_COLUMN = "tokens"
@@ -126,11 +141,14 @@ model_config = dict(
     pad_idx = PAD_IDX,
     dropout = 0.5,
 )
-model = build_model(**model_config, device = device)
+model = MODELS.get(args.model)(**model_config, device = device) # type: ignore
 loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 optimizer = torch.optim.AdamW(model.parameters())
 
 def eval(model, loss_fn, eval_idx):
+    # this will force the model to only use it's predictions during sequence decoding
+    # otherwise it will mix-in target values during the prediction process
+    TEACHER_FORCE = False
     ds_e = Dataset.from_dict({INDEX_COLUMN: eval_idx.tolist()})
     dataloader = DataLoader(ds_e, batch_size=batch_size) # type: ignore
     
@@ -140,7 +158,7 @@ def eval(model, loss_fn, eval_idx):
         idx = batch[INDEX_COLUMN].numpy()
         X, Y = ds_c.select(idx)[:][TOKENS_COLUMN].to(device), \
             ds_p.select(idx)[:][TOKENS_COLUMN].to(device)
-        Y_hat = model(X, Y, 1)
+        Y_hat = model(X, Y, TEACHER_FORCE)
 
         n_tokens = (Y != PAD_IDX).sum().item()
         loss_sum += loss_fn(
@@ -187,7 +205,7 @@ for e in range(1, epochs + 1):
 
 end_t = time.perf_counter()
 elapsed = end_t - start_t
-print(f"trained model succesfully in {elapsed:.3f} s")
+print(f"trained model successfully in {elapsed:.3f} s")
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 training_results_file = f"{RESULTS_DIR}/{run_id}.pkl"
@@ -204,5 +222,4 @@ with open(LOG_FILE, "a") as f:
         f"{run_id}: "
         f"{"; ".join([f"{k}={v}" for k, v in args.__dict__.items()])};\n"
     )
-print(f"appened run info to {LOG_FILE}")
-
+print(f"append run info to {LOG_FILE}")

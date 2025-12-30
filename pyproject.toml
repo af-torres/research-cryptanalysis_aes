@@ -10,7 +10,7 @@ requires-python = ">=3.9"
 dependencies = []
 
 [tool.setuptools]
-packages = ["scripts"]
+packages = ["scripts", "methods"]
 
 # Optional but recommended for tests
 [tool.pytest.ini_options]
