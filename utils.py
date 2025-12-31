@@ -15,3 +15,13 @@ def parse_run_log(LOG_FILE):
         runs[id] = args
 
     return runs
+
+def get_dataset(LOG_FILE, run_id):
+    runs = parse_run_log(LOG_FILE)
+    run_config = runs.get(run_id, None)
+    assert run_config is not None
+    
+    dataset = run_config.get("dataset", "")
+    assert dataset != ""
+    
+    return dataset

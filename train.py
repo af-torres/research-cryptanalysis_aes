@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -226,6 +227,10 @@ for e in range(1, epochs + 1):
 end_t = time.perf_counter()
 elapsed = end_t - start_t
 print(f"trained model successfully in {elapsed:.3f} s")
+
+# get clean metrics format
+tr_metrics = pd.DataFrame(tr_metrics).map(lambda x: x.item() if hasattr(x, 'item') else x)
+vl_metrics = pd.DataFrame(vl_metrics).map(lambda x: x.item() if hasattr(x, 'item') else x)
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 training_results_file = f"{RESULTS_DIR}/{run_id}.pkl"
