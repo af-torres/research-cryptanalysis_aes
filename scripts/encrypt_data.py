@@ -54,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--random_iv', '-r',
         action='store_true',
     )
+    parser.add_argument('-rc', '--reduced_char_set', action='store_true')
     parser.add_argument("--n_proc", "-n", type=int, default=4)
     args = parser.parse_args()
 
@@ -70,9 +71,13 @@ if __name__ == "__main__":
     dataset = d_config.get(args.dataset, None)
     assert dataset
 
-    DATA_DIR = dataset.get("data_dir", None)
+    DATA_DIR = dataset.get("data_dir", None)        
     DATA_NAME = dataset.get("data_name", None)
     assert  DATA_DIR and DATA_NAME
+    
+    if args.reduced_char_set:
+        DATA_DIR += "-reduced_char_set"
+        DATA_NAME += "-reduced_char_set"
 
     random_iv: bool = args.random_iv
 

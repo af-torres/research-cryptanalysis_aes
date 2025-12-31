@@ -1,9 +1,26 @@
 from datasets import load_dataset
 from scripts.utils import shard_into_files
+import re
+import argparse
 import os
+import numpy as np
+import random
+
+parser = argparse.ArgumentParser(
+    prog='ProgramName',
+    description='What the program does',
+    epilog='Text at the bottom of help'
+)
+parser.add_argument('-rc', '--reduced_char_set', action='store_true')
+parser.add_argument('-ms', "--max_size", default=-1, type=int)
+args = parser.parse_args()
+
+rc = args.reduced_char_set
+ms = args.max_size
 
 DATA_DIR = "./data/plain_text/wikipedia"
 MAX_SHARD_SIZE = 15000
+MIN_SENTENCE_SIZE = 30
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def split_to_chunks(batch, max_size=500):
@@ -18,10 +35,24 @@ ds = ds.filter(lambda sentence: sentence["text"] is not None and sentence["text"
 ds = ds.map(lambda sentence: {
     "text": sentence["text"].strip().replace("<unk>", " ")
 })
+
+if rc:
+    DATA_DIR += "-reduced_char_set"
+    ds = ds.map(lambda sentence: {
+        "text": re.sub(r"[^a-z ]", "", sentence["text"].lower())
+    })
+
+ds = ds.filter(lambda sentence: len(sentence["text"]) < MIN_SENTENCE_SIZE)
 ds = ds.map(split_to_chunks, batched=True)
+
+if ms > 0:
+    random.seed(42)
+    select_idx = random.sample(np.arange(len(ds)).tolist(), ms)
+    ds = ds.select(select_idx)
+
 ds = ds.map(lambda text, idx: {
     "_idx": idx,
     "text": text,
 }, with_indices=True)
-
 shard_into_files(ds, DATA_DIR, len(ds) // MAX_SHARD_SIZE) # type: ignore
+
