@@ -42,17 +42,17 @@ if rc:
         "text": re.sub(r"[^a-z ]", "", sentence["text"].lower())
     })
 
-ds = ds.filter(lambda sentence: len(sentence["text"]) < MIN_SENTENCE_SIZE)
 ds = ds.map(split_to_chunks, batched=True)
+ds = ds.filter(lambda sentence: len(sentence["text"]) > MIN_SENTENCE_SIZE)
 
 if ms > 0:
     random.seed(42)
     select_idx = random.sample(np.arange(len(ds)).tolist(), ms)
     ds = ds.select(select_idx)
 
-ds = ds.map(lambda text, idx: {
+ds = ds.map(lambda sentence, idx: {
     "_idx": idx,
-    "text": text,
+    "text": sentence["text"],
 }, with_indices=True)
 shard_into_files(ds, DATA_DIR, len(ds) // MAX_SHARD_SIZE) # type: ignore
 

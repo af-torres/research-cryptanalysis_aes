@@ -28,6 +28,7 @@ parser.add_argument('-k', '--key',
 parser.add_argument('-r', '--random_iv',
     action='store_true',
 )
+parser.add_argument('-rc', '--reduced_char_set', action='store_true')
 parser.add_argument('-n', '--n_proc', type=int, default=4)
 args = parser.parse_args()
 
@@ -48,6 +49,10 @@ assert dataset
 ENCRYPTED_TEXT_DATA_DIR = dataset.get("encrypted_text_dir")
 DATA_NAME = dataset.get("data_name")
 assert ENCRYPTED_TEXT_DATA_DIR and DATA_NAME
+
+if args.reduced_char_set:
+    ENCRYPTED_TEXT_DATA_DIR += "-reduced_char_set"
+    DATA_NAME += "-reduced_char_set"
 
 random_iv: bool = args.random_iv
 ENCRYPTED_TEXT_DATA_DIR = f"{ENCRYPTED_TEXT_DATA_DIR}{"-rand-iv" if random_iv else ""}"

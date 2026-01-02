@@ -1,7 +1,9 @@
-import os
 import argparse
-from datasets import load_dataset, Dataset
+import os
 from glob import glob
+import pickle
+
+from datasets import load_dataset, Dataset
 from scripts.utils import get_max_len, byte_tokenize
 
 parser = argparse.ArgumentParser(
@@ -18,6 +20,7 @@ parser.add_argument('-d', '--dataset',
     ]
 )
 parser.add_argument('-n', '--n_proc', type=int, default=4)
+parser.add_argument('-rc', '--reduced_char_set', action='store_true')
 args = parser.parse_args()
 
 d_config = dict(
@@ -38,7 +41,33 @@ PLAIN_TEXT_DATA_DIR = dataset.get("plain_text_dir")
 DATA_NAME = dataset.get("data_name")
 assert PLAIN_TEXT_DATA_DIR and DATA_NAME
 
+if args.reduced_char_set:
+    PLAIN_TEXT_DATA_DIR += "-reduced_char_set"
+    DATA_NAME += "-reduced_char_set"
+
 OUT_DIR = f"./data/tokens/{DATA_NAME}/plain_text"
+METADATA_FILE = f"./data/tokens/{DATA_NAME}/meta_data.pkl"
+
+def get_unique_labels(p_tokens):
+    def collect_uniques(batch):
+        return {"_uniques": list(set(sum(batch["tokens"], [])))}
+
+    tmp = p_tokens.map(
+        collect_uniques,
+        batched=True,
+        batch_size=1000,
+        remove_columns=p_tokens.column_names,
+    )
+    unique_vals = set().union(tmp["_uniques"])
+
+    return unique_vals
+
+def encode_to_reduced_vocab(sentence, token_to_idx):
+    sentence["tokens"] = [
+        token_to_idx[t]
+        for t in sentence["tokens"]
+    ]
+    return sentence
 
 p_set_files = glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**"))
 p_set = load_dataset(
@@ -54,7 +83,20 @@ p_tokens = p_set.map(
 )
 print("mapped plain text sentences to tokens")
 
-os.makedirs(OUT_DIR, exist_ok=True)
+if args.reduced_char_set:
+    reduced_vocab = get_unique_labels(p_tokens)
+    idx_to_token = dict(zip(range(len(reduced_vocab)), reduced_vocab))
+    token_to_idx = dict(zip(reduced_vocab, range(len(reduced_vocab))))
+    p_tokens = p_tokens.map(lambda sentence: encode_to_reduced_vocab(sentence, token_to_idx))
+    
+    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
+    with open(METADATA_FILE, "wb") as f:
+        pickle.dump(dict(
+            reduced_vocab = reduced_vocab,
+            idx_to_token = idx_to_token,
+            token_to_idx = token_to_idx,
+        ), f)
+    print(f"wrote metadata file to {METADATA_FILE}")
+
 p_tokens.save_to_disk(OUT_DIR)
 print(f"wrote tokenized dataset: {OUT_DIR}")
-

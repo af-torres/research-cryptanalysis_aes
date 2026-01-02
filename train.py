@@ -42,6 +42,9 @@ parser.add_argument('-d', '--dataset', choices = [
         'wiki_128',
         'wiki_192',
         'wiki_256',
+        'wiki_128_rc',
+        'wiki_192_rc',
+        'wiki_256_rc',
         'wiki_rand_iv_128',
         'wiki_rand_iv_192',
         'wiki_rand_iv_256',
@@ -75,6 +78,24 @@ DATASET_DIR = dict(
         plain_text = "./data/tokens/wikipedia/plain_text",
         encrypted_text = "./data/tokens/wikipedia/encrypted/256-bytes",
     ),
+    wiki_128_rc = dict(
+        plain_text = "./data/tokens/wikipedia-reduced_char_set/plain_text",
+        meta_data = "./data/tokens/wikipedia-reduced_char_set/meta_data.pkl",
+        encrypted_text = "./data/tokens/wikipedia-reduced_char_set/encrypted/128-bytes",
+        reduced_char_set = True
+    ),
+    wiki_192_rc = dict(
+        plain_text = "./data/tokens/wikipedia-reduced_char_set/plain_text",
+        meta_data = "./data/tokens/wikipedia-reduced_char_set/meta_data.pkl",
+        encrypted_text = "./data/tokens/wikipedia-reduced_char_set/encrypted/192-bytes",
+        reduced_char_set = True
+    ),
+    wiki_256_rc = dict(
+        plain_text = "./data/tokens/wikipedia-reduced_char_set/plain_text",
+        meta_data = "./data/tokens/wikipedia-reduced_char_set/meta_data.pkl",
+        encrypted_text = "./data/tokens/wikipedia-reduced_char_set/encrypted/256-bytes",
+        reduced_char_set = True
+    ),
     wiki_rand_iv_128 = dict(
         plain_text = "./data/tokens/wikipedia/plain_text",
         encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/128-bytes",
@@ -100,6 +121,10 @@ LOG_FILE = "./training_log.txt"
 TOKENS_COLUMN = "tokens"
 INDEX_COLUMN = "_idx"
 
+INPUT_DIM = EOS_IDX + 1
+OUTPUT_DIM = EOS_IDX + 1
+PAD_IDX_OUT = PAD_IDX
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_id = uuid.uuid4().hex
 metrics = MetricCollection({
@@ -123,6 +148,22 @@ ds_c = Dataset.load_from_disk(encrypted_text_ds_dir).sort(INDEX_COLUMN).with_for
 ds_p = Dataset.load_from_disk(plain_text_ds_dir).sort(INDEX_COLUMN).with_format("torch")
 assert len(ds_c) == len(ds_p)
 
+reduced_char_set = ds_config.get("reduced_char_set", False)
+if reduced_char_set:
+    """
+    The reduced character dataset has a different vocab size (OUTPUT_DIM) and padding index
+    for the cross-entropoy loss (PAD_IDX_OUT), and we need to adjust the program 
+    to correctly match this dataset
+    """
+    meta_data_file = ds_config.get("meta_data")
+    assert meta_data_file
+
+    with open(meta_data_file, "rb") as f:
+        meta_data = pickle.load(f)
+
+    OUTPUT_DIM = len(meta_data["reduced_vocab"])
+    PAD_IDX_OUT = meta_data["token_to_idx"][PAD_IDX]
+
 n = len(ds_p)
 ds_size = n if n < ds_max_size else ds_max_size
 
@@ -143,15 +184,16 @@ epochs = args.epochs
 dataloader = DataLoader(ds_tr, batch_size=batch_size, shuffle=True) # type: ignore
 
 model_config = dict(
-    input_dim = EOS_IDX + 1,
+    input_dim = INPUT_DIM,
     embed_dim = 500,
     hidden_dim = 500,
-    output_dim = EOS_IDX + 1,
+    output_dim = OUTPUT_DIM,
     pad_idx = PAD_IDX,
+    pad_idx_out = PAD_IDX_OUT,
     dropout = 0.5,
 )
 model = MODELS.get(args.model)(**model_config, device = device) # type: ignore
-loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX_OUT)
 optimizer = torch.optim.AdamW(model.parameters())
 
 def eval(model, loss_fn, eval_idx):

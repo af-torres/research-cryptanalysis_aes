@@ -75,9 +75,9 @@ class Seq2Seq(nn.Module):
             
         return outputs
 
-def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, dropout, device) -> Seq2Seq:
+def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, pad_idx_out, dropout, device) -> Seq2Seq:
     encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
-    decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx).to(device)
+    decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx_out).to(device)
     seq2seq = Seq2Seq(encoder, decoder, dropout, device)
 
     return seq2seq
