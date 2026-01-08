@@ -1,0 +1,9 @@
+model_config = dict(
+    input_dim = INPUT_DIM,
+    embed_dim = 500,
+    hidden_dim = 500,
+    output_dim = OUTPUT_DIM,
+    pad_idx = PAD_IDX,
+    pad_idx_out = PAD_IDX_OUT,
+    dropout = 0.5,
+)

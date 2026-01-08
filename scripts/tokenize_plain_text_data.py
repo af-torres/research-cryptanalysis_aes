@@ -48,15 +48,22 @@ if args.reduced_char_set:
 OUT_DIR = f"./data/tokens/{DATA_NAME}/plain_text"
 METADATA_FILE = f"./data/tokens/{DATA_NAME}/meta_data.pkl"
 
-def get_unique_labels(p_tokens):
+def get_unique_labels(ds, col="tokens"):
     def collect_uniques(batch):
-        return {"_uniques": list(set(sum(batch["tokens"], [])))}
+        c = batch[col]
+        uniques = set()
+        for item in c:
+            if isinstance(item, str):
+                uniques.update(item)   # add characters
+            else:
+                uniques.update(item)   # add list elements
+        return {"_uniques": list(uniques)}
 
-    tmp = p_tokens.map(
+    tmp = ds.map(
         collect_uniques,
         batched=True,
         batch_size=1000,
-        remove_columns=p_tokens.column_names,
+        remove_columns=ds.column_names,
     )
     unique_vals = set().union(tmp["_uniques"])
 
@@ -73,6 +80,7 @@ p_set_files = glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**"))
 p_set = load_dataset(
     "csv", data_files=p_set_files, split="train",
 )
+unique_letters = get_unique_labels(p_set, col="text")
 print("loaded plain text dataset")
 
 max_len = get_max_len(p_set)
@@ -92,6 +100,7 @@ if args.reduced_char_set:
     os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
     with open(METADATA_FILE, "wb") as f:
         pickle.dump(dict(
+            unique_letters = unique_letters,
             reduced_vocab = reduced_vocab,
             idx_to_token = idx_to_token,
             token_to_idx = token_to_idx,

@@ -108,8 +108,8 @@ DATASET_DIR = dict(
         plain_text = "./data/tokens/wikipedia/plain_text",
         encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/256-bytes",
     ),
-
 )
+
 MODELS = dict(
     lstm = lstm,
     gru = gru,
@@ -186,11 +186,12 @@ dataloader = DataLoader(ds_tr, batch_size=batch_size, shuffle=True) # type: igno
 model_config = dict(
     input_dim = INPUT_DIM,
     embed_dim = 500,
-    hidden_dim = 500,
+    hidden_dim = 250,
     output_dim = OUTPUT_DIM,
     pad_idx = PAD_IDX,
     pad_idx_out = PAD_IDX_OUT,
-    dropout = 0.5,
+    n_layers = 6,
+    dropout = 0.2,
 )
 model = MODELS.get(args.model)(**model_config, device = device) # type: ignore
 loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX_OUT)

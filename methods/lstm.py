@@ -10,7 +10,7 @@ class Encoder(nn.Module):
 
         self.embedding = nn.Embedding(input_dim, embed_dim, padding_idx=pad_idx)
         self.locked_dropout = LockedDropout(dropout)
-        self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, batch_first=True)
+        self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers, dropout=dropout if n_layers > 1 else 0.0, batch_first=True)
 
     def forward(self, src):
         # src: [batch_size, src_len]
@@ -75,9 +75,9 @@ class Seq2Seq(nn.Module):
             
         return outputs
 
-def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, pad_idx_out, dropout, device) -> Seq2Seq:
-    encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx).to(device)
-    decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx_out).to(device)
+def build_model(input_dim, embed_dim, hidden_dim, output_dim, pad_idx, pad_idx_out, dropout, n_layers=1, device="cpu") -> Seq2Seq:
+    encoder = Encoder(input_dim, embed_dim, hidden_dim, pad_idx, n_layers, dropout).to(device)
+    decoder = Decoder(output_dim, embed_dim, hidden_dim, pad_idx_out, n_layers, dropout).to(device)
     seq2seq = Seq2Seq(encoder, decoder, dropout, device)
 
     return seq2seq
