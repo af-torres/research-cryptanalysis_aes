@@ -55,4 +55,3 @@ ds = ds.map(lambda sentence, idx: {
     "text": sentence["text"],
 }, with_indices=True)
 shard_into_files(ds, DATA_DIR, len(ds) // MAX_SHARD_SIZE) # type: ignore
-
