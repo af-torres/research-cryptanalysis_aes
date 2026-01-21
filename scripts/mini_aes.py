@@ -38,18 +38,16 @@ def encrypt(args):
         sys.exit(1)
 
     plain_text_array = np.array(maes.integer_to_GF(numbers)).reshape((-1, 4))
-    ciphered_text = ""
 
     plain_text = MS(plain_text_array[0, :].tolist())
-    ciphered_text += ",".join([c.__str__() for c in maes.GF_to_integer(maes.encrypt(plain_text, key))])
+    ciphered_text = ",".join([str(int(c)) for c in maes.GF_to_integer(maes.encrypt(plain_text, key))])
     sys.stdout.write(ciphered_text)
     
     for i in range(1, len(plain_text_array)):
         sys.stdout.write(",")
         plain_text = MS(plain_text_array[i, :].tolist())
-        ciphered_text += ",".join([c.__str__() for c in maes.GF_to_integer(maes.encrypt(plain_text, key))])
-    
-    sys.stdout.write(ciphered_text)
+        ciphered_text = ",".join([str(int(c)) for c in maes.GF_to_integer(maes.encrypt(plain_text, key))])
+        sys.stdout.write(ciphered_text)
 
 def decrypt(args):
     print("Not implemented")
