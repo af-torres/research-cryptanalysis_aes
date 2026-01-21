@@ -12,16 +12,18 @@ def shard_into_files(enc, baseName, num_shards):
         shard.to_csv(fname)
         print(f"wrote file {fname}")
 
-def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False):
+def byte_tokenize(sentence, add_sos=True, add_eos=True, max_len=None, b64_enc=False, maes_ec=False):
     PAD_IDX = 256
     SOS_IDX = 257
     EOS_IDX = 258
 
     if b64_enc:
         decoded_sentence = base64.b64decode(sentence)
+    elif maes_ec:
+        decoded_sentence = [int(char) for char in sentence.split(",")]
     else:
         decoded_sentence = sentence.encode("utf-8")
-    byte_ids = list(decoded_sentence) 
+    byte_ids = list(decoded_sentence)
     
     if add_sos:
         byte_ids = [SOS_IDX] + byte_ids
@@ -45,3 +47,23 @@ def get_max_len(ds):
             max_bytes = b
     return max_bytes + 2  # + [SOS, EOS]
 
+def get_unique_tokens(ds, col="tokens"):
+    def collect_uniques(batch):
+        c = batch[col]
+        uniques = set()
+        for item in c:
+            if isinstance(item, str):
+                uniques.update(item)   # add characters
+            else:
+                uniques.update(item)   # add list elements
+        return {"_uniques": list(uniques)}
+
+    tmp = ds.map(
+        collect_uniques,
+        batched=True,
+        batch_size=1000,
+        remove_columns=ds.column_names,
+    )
+    unique_vals = set().union(tmp["_uniques"])
+
+    return unique_vals

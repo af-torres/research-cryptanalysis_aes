@@ -3,8 +3,8 @@ import os
 from glob import glob
 import pickle
 
-from datasets import load_dataset, Dataset
-from scripts.utils import get_max_len, byte_tokenize
+from datasets import load_dataset
+from scripts.utils import get_max_len, byte_tokenize, get_unique_tokens
 
 parser = argparse.ArgumentParser(
     prog='ProgramName',
@@ -16,9 +16,11 @@ parser.add_argument('-d', '--dataset',
     required=True,
     choices=[
         "eng_sentences",
-        "wikipedia_text"
+        "wikipedia_text",
+        "mini_aes"
     ]
 )
+parser.add_argument('--mini_aes', action='store_true')
 parser.add_argument('-n', '--n_proc', type=int, default=4)
 parser.add_argument('-rc', '--reduced_char_set', action='store_true')
 args = parser.parse_args()
@@ -32,10 +34,13 @@ d_config = dict(
         plain_text_dir = "./data/plain_text/wikipedia",
         data_name = "wikipedia"
     ),
+    mini_aes = dict(
+        plain_text_dir = "./data/plain_text/mini_aes",
+        data_name = "mini_aes"
+    ),
 )
 dataset = d_config.get(args.dataset, None)
 assert dataset
-
 
 PLAIN_TEXT_DATA_DIR = dataset.get("plain_text_dir")
 DATA_NAME = dataset.get("data_name")
@@ -45,29 +50,12 @@ if args.reduced_char_set:
     PLAIN_TEXT_DATA_DIR += "-reduced_char_set"
     DATA_NAME += "-reduced_char_set"
 
+USE_MINI_AES_ENC = args.mini_aes
+
 OUT_DIR = f"./data/tokens/{DATA_NAME}/plain_text"
 METADATA_FILE = f"./data/tokens/{DATA_NAME}/meta_data.pkl"
 
-def get_unique_labels(ds, col="tokens"):
-    def collect_uniques(batch):
-        c = batch[col]
-        uniques = set()
-        for item in c:
-            if isinstance(item, str):
-                uniques.update(item)   # add characters
-            else:
-                uniques.update(item)   # add list elements
-        return {"_uniques": list(uniques)}
 
-    tmp = ds.map(
-        collect_uniques,
-        batched=True,
-        batch_size=1000,
-        remove_columns=ds.column_names,
-    )
-    unique_vals = set().union(tmp["_uniques"])
-
-    return unique_vals
 
 def encode_to_reduced_vocab(sentence, token_to_idx):
     sentence["tokens"] = [
@@ -80,19 +68,19 @@ p_set_files = glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**"))
 p_set = load_dataset(
     "csv", data_files=p_set_files, split="train",
 )
-unique_letters = get_unique_labels(p_set, col="text")
+unique_letters = get_unique_tokens(p_set, col="text")
 print("loaded plain text dataset")
 
 max_len = get_max_len(p_set)
 p_tokens = p_set.map(
-    lambda sentence: {"tokens": byte_tokenize(sentence["text"], max_len=max_len)},
+    lambda sentence: {"tokens": byte_tokenize(sentence["text"], max_len=max_len, maes_ec=USE_MINI_AES_ENC)},
     remove_columns=["text"],
     num_proc=args.n_proc
 )
 print("mapped plain text sentences to tokens")
 
-if args.reduced_char_set:
-    reduced_vocab = get_unique_labels(p_tokens)
+if args.reduced_char_set or USE_MINI_AES_ENC:
+    reduced_vocab = get_unique_tokens(p_tokens)
     idx_to_token = dict(zip(range(len(reduced_vocab)), reduced_vocab))
     token_to_idx = dict(zip(reduced_vocab, range(len(reduced_vocab))))
     p_tokens = p_tokens.map(lambda sentence: encode_to_reduced_vocab(sentence, token_to_idx))

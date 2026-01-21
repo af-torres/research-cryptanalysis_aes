@@ -48,6 +48,7 @@ parser.add_argument('-d', '--dataset', choices = [
         'wiki_rand_iv_128',
         'wiki_rand_iv_192',
         'wiki_rand_iv_256',
+        'mini_aes'
     ],
     required=True,
 )
@@ -62,6 +63,7 @@ parser.add_argument('-bs', '--batch_size',
 parser.add_argument('-ms', '--ds_max_size',
     type=int, default=30000
 )
+parser.add_argument('--mini_aes', action='store_true')
 args = parser.parse_args()
 print(f"training model {args}")
 
@@ -108,6 +110,12 @@ DATASET_DIR = dict(
         plain_text = "./data/tokens/wikipedia/plain_text",
         encrypted_text = "./data/tokens/wikipedia-rand-iv/encrypted/256-bytes",
     ),
+    mini_aes = dict(
+        plain_text = "./data/tokens/mini_aes/plain_text",
+        meta_data = "./data/tokens/mini_aes/meta_data.pkl",
+        encrypted_text = "./data/tokens/mini_aes/encrypted/mini_aes.bin",
+        reduced_char_set = True,
+    )
 )
 
 MODELS = dict(
@@ -144,15 +152,16 @@ encrypted_text_ds_dir = ds_config.get("encrypted_text")
 assert plain_text_ds_dir and encrypted_text_ds_dir
 
 ds_max_size = args.ds_max_size
-ds_c = Dataset.load_from_disk(encrypted_text_ds_dir).sort(INDEX_COLUMN).with_format("torch")
-ds_p = Dataset.load_from_disk(plain_text_ds_dir).sort(INDEX_COLUMN).with_format("torch")
+ds_c = Dataset.load_from_disk(encrypted_text_ds_dir).sort(INDEX_COLUMN).with_format("torch") # type:ignore
+ds_p = Dataset.load_from_disk(plain_text_ds_dir).sort(INDEX_COLUMN).with_format("torch") # type:ignore
 assert len(ds_c) == len(ds_p)
 
 reduced_char_set = ds_config.get("reduced_char_set", False)
-if reduced_char_set:
+mini_aes = args.mini_aes
+if reduced_char_set or mini_aes:
     """
     The reduced character dataset has a different vocab size (OUTPUT_DIM) and padding index
-    for the cross-entropoy loss (PAD_IDX_OUT), and we need to adjust the program 
+    for the cross-entropy loss (PAD_IDX_OUT), and we need to adjust the program 
     to correctly match this dataset
     """
     meta_data_file = ds_config.get("meta_data")
@@ -163,6 +172,8 @@ if reduced_char_set:
 
     OUTPUT_DIM = len(meta_data["reduced_vocab"])
     PAD_IDX_OUT = meta_data["token_to_idx"][PAD_IDX]
+    if mini_aes:
+        INPUT_DIM = len(meta_data["reduced_vocab"])
 
 n = len(ds_p)
 ds_size = n if n < ds_max_size else ds_max_size
