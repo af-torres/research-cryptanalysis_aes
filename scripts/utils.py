@@ -67,3 +67,10 @@ def get_unique_tokens(ds, col="tokens"):
     unique_vals = set().union(tmp["_uniques"])
 
     return unique_vals
+
+def encode_to_reduced_vocab(sentence, token_to_idx):
+    sentence["tokens"] = [
+        token_to_idx[t]
+        for t in sentence["tokens"]
+    ]
+    return sentence

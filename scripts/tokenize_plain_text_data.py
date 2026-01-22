@@ -4,7 +4,7 @@ from glob import glob
 import pickle
 
 from datasets import load_dataset
-from scripts.utils import get_max_len, byte_tokenize, get_unique_tokens
+from scripts.utils import get_max_len, byte_tokenize, get_unique_tokens, encode_to_reduced_vocab
 
 parser = argparse.ArgumentParser(
     prog='ProgramName',
@@ -55,15 +55,6 @@ USE_MINI_AES_ENC = args.mini_aes
 OUT_DIR = f"./data/tokens/{DATA_NAME}/plain_text"
 METADATA_FILE = f"./data/tokens/{DATA_NAME}/meta_data.pkl"
 
-
-
-def encode_to_reduced_vocab(sentence, token_to_idx):
-    sentence["tokens"] = [
-        token_to_idx[t]
-        for t in sentence["tokens"]
-    ]
-    return sentence
-
 p_set_files = glob(os.path.join(PLAIN_TEXT_DATA_DIR, "**"))
 p_set = load_dataset(
     "csv", data_files=p_set_files, split="train",
@@ -88,7 +79,9 @@ if args.reduced_char_set or USE_MINI_AES_ENC:
     os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
     with open(METADATA_FILE, "wb") as f:
         pickle.dump(dict(
-            unique_letters = unique_letters,
+            # this way of computing unique_letters comes from the difference in formatting used for mini_aes characters...
+            # in particular, for the mini_aes case we use numbers in [0, 15] and separate them with "," while in regular aes we use actual utf characters on encrypted and decrypted sets
+            unique_letters = unique_letters if not USE_MINI_AES_ENC else reduced_vocab,
             reduced_vocab = reduced_vocab,
             idx_to_token = idx_to_token,
             token_to_idx = token_to_idx,

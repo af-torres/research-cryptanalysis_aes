@@ -130,8 +130,10 @@ TOKENS_COLUMN = "tokens"
 INDEX_COLUMN = "_idx"
 
 INPUT_DIM = EOS_IDX + 1
+PAD_IDX_IN = PAD_IDX
 OUTPUT_DIM = EOS_IDX + 1
 PAD_IDX_OUT = PAD_IDX
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_id = uuid.uuid4().hex
@@ -156,15 +158,15 @@ ds_c = Dataset.load_from_disk(encrypted_text_ds_dir).sort(INDEX_COLUMN).with_for
 ds_p = Dataset.load_from_disk(plain_text_ds_dir).sort(INDEX_COLUMN).with_format("torch") # type:ignore
 assert len(ds_c) == len(ds_p)
 
+meta_data_file = ds_config.get("meta_data")
 reduced_char_set = ds_config.get("reduced_char_set", False)
 mini_aes = args.mini_aes
-if reduced_char_set or mini_aes:
+if reduced_char_set:
     """
     The reduced character dataset has a different vocab size (OUTPUT_DIM) and padding index
     for the cross-entropy loss (PAD_IDX_OUT), and we need to adjust the program 
     to correctly match this dataset
     """
-    meta_data_file = ds_config.get("meta_data")
     assert meta_data_file
 
     with open(meta_data_file, "rb") as f:
@@ -172,8 +174,16 @@ if reduced_char_set or mini_aes:
 
     OUTPUT_DIM = len(meta_data["reduced_vocab"])
     PAD_IDX_OUT = meta_data["token_to_idx"][PAD_IDX]
-    if mini_aes:
-        INPUT_DIM = len(meta_data["reduced_vocab"])
+
+if mini_aes:
+    assert meta_data_file
+
+    encrypted_metadata_file = meta_data_file.replace("meta_data", "meta_data_encrypted") #type:ignore
+    with open(meta_data_file, "rb") as f:
+        meta_data = pickle.load(f)
+
+    INPUT_DIM = len(meta_data["reduced_vocab"])
+    PAD_IDX_IN = meta_data["token_to_idx"][PAD_IDX]
 
 n = len(ds_p)
 ds_size = n if n < ds_max_size else ds_max_size
@@ -199,7 +209,7 @@ model_config = dict(
     embed_dim = 500,
     hidden_dim = 250,
     output_dim = OUTPUT_DIM,
-    pad_idx = PAD_IDX,
+    pad_idx = PAD_IDX_IN,
     pad_idx_out = PAD_IDX_OUT,
     n_layers = 6,
     dropout = 0.2,
@@ -227,7 +237,7 @@ def eval(model, loss_fn, eval_idx):
         Y = Y.reshape(-1)
         
         metrics.update(Y_hat.argmax(dim=-1), Y)
-        n_tokens = (Y != PAD_IDX).sum().item()
+        n_tokens = (Y != PAD_IDX_OUT).sum().item()
         loss_sum += loss_fn(
             Y_hat,
             Y

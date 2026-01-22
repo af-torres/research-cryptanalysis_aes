@@ -2,7 +2,8 @@ import os
 import argparse
 from datasets import load_dataset
 from glob import glob
-from scripts.utils import get_max_len, byte_tokenize
+import pickle
+from scripts.utils import get_max_len, byte_tokenize, get_unique_tokens, encode_to_reduced_vocab
 
 parser = argparse.ArgumentParser(
     prog='ProgramName',
@@ -68,6 +69,8 @@ ENCRYPTED_TEXT_DATA_DIR = f"{ENCRYPTED_TEXT_DATA_DIR}{"-rand-iv" if random_iv el
 DATA_NAME = f"{DATA_NAME}{"-rand-iv" if random_iv else ""}"
 OUT_DIR = f"./data/tokens/{DATA_NAME}/encrypted"
 
+METADATA_FILE = f"./data/tokens/{DATA_NAME}/meta_data_encrypted.pkl"
+
 print("mapping encrypted sentences to tokens")
 c_set_dir = f"{ENCRYPTED_TEXT_DATA_DIR}/{k}"
 c_set_files = glob(os.path.join(c_set_dir, "**"))
@@ -78,6 +81,23 @@ c_tokens = c_set.map(
     remove_columns=["text"],
     num_proc=args.n_proc
 )
+
+if USE_MINI_AES_ENC:
+    reduced_vocab = get_unique_tokens(c_tokens)
+    idx_to_token = dict(zip(range(len(reduced_vocab)), reduced_vocab))
+    token_to_idx = dict(zip(reduced_vocab, range(len(reduced_vocab))))
+    c_tokens = c_tokens.map(lambda sentence: encode_to_reduced_vocab(sentence, token_to_idx))
+
+    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
+    with open(METADATA_FILE, "wb") as f:
+        pickle.dump(dict(
+            unique_letters = reduced_vocab,
+            reduced_vocab = reduced_vocab,
+            idx_to_token = idx_to_token,
+            token_to_idx = token_to_idx,
+        ), f)
+    print(f"wrote metadata file to {METADATA_FILE}")
+
 
 print("wiriting tokenized dataset")
 baseName = f"{OUT_DIR}/{k}"
