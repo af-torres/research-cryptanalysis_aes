@@ -44,6 +44,11 @@
 #25 "-d wiki_192_rc"
 #26 "-d wiki_256_rc"
 
+###################
+# MiniAES
+###################
+#27 "-d mini_aes --mini_aes"
+
 TASK_ARGS=("-d short_128" "-d short_192" "-d short_256" \
     "-d short_rand_iv_128" "-d short_rand_iv_192" "-d short_rand_iv_256" \
     "-d wiki_128 -m lstm" "-d wiki_192 -m lstm" "-d wiki_256 -m lstm" \
@@ -52,11 +57,12 @@ TASK_ARGS=("-d short_128" "-d short_192" "-d short_256" \
     "-d wiki_rand_iv_128 -m gru" "-d wiki_rand_iv_192 -m gru" "-d wiki_rand_iv_256 -m gru" \
     "-d wiki_128 -m rnn" "-d wiki_192 -m rnn" "-d wiki_256 -m rnn" \
     "-d wiki_rand_iv_128 -m rnn" "-d wiki_rand_iv_192 -m rnn" "-d wiki_rand_iv_256 -m rnn"\
-    "-d wiki_128_rc" "-d wiki_192_rc" "-d wiki_256_rc")
+    "-d wiki_128_rc" "-d wiki_192_rc" "-d wiki_256_rc" \
+    "-d mini_aes --mini_aes")
 WORKING_DIR=/work/pi_kelum_gajamannage_uri_edu/research-cryptanalysis_aes
 
 cd "$WORKING_DIR"
 
 source ./start_venv.sh
 
-python train.py ${TASK_ARGS[$SLURM_ARRAY_TASK_ID]} -e 500 -bs 500 -ms 30000
+python train.py ${TASK_ARGS[$SLURM_ARRAY_TASK_ID]} -e 500 -bs 100 -ms 30000
